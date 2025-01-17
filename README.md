@@ -15,9 +15,10 @@
 
 <font size=7><div align='center' > [[📽 VITA-1.5 Demo Show! Here We Go! 🔥](https://youtu.be/tyi6SVFT5mM?si=fkMQCrwa5fVnmEe7)] </div></font>  
 <font size=7><div align='center' > VITA-1.5 spports both **English** and **Chinese**.🌟 </div></font>  
-You can experience our [🤖 Basic Demo](https://modelscope.cn/studios/modelscope/VITA1.5_demo) on ModelScope directly. The Real-Time Interactive Demo needs to be configured according to the [instructions](#-real-time-interactive-demo).
+You can experience our [Basic Demo](https://modelscope.cn/studios/modelscope/VITA1.5_demo) on ModelScope directly. The Real-Time Interactive Demo needs to be configured according to the [instructions](#-real-time-interactive-demo).
 
 ## 🔥 News
+* **`2025.01.17`** 🌟 ModelScope has supported VITA-1.5! You could try our [Basic Demo](https://modelscope.cn/studios/modelscope/VITA1.5_demo) on it!
 * **`2025.01.06`** 🌟 [VLMEvalKit](https://github.com/open-compass/VLMEvalKit) of OpenCompass has supported our both VITA-1.5 and VITA-1.0 models!
 * **`2025.01.06`** 🌟 The [technical report](https://huggingface.co/VITA-MLLM) of VITA-1.5 has been released!
 * **`2024.12.20`** 🌟 We are excited to introduce the **VITA-1.5**, a more powerful and more real-time version!
@@ -344,15 +345,15 @@ If you find our work helpful for your research, please consider citing our work.
 
 ```bibtex
 @article{fu2025vita,
-  title={VITA-1.5: Towards gpt-4o level real-time vision and speech interaction},
-  author={Fu, Chaoyou and Lin, Haojia and Wang, Xiong and Zhang, Yi-Fan and Shen, Yunhang and Liu, Xiaoyu and Li, Yangze and Long, Zuwei and Gao, Heting and others},
+  title={VITA-1.5: Towards GPT-4o Level Real-Time Vision and Speech Interaction},
+  author={Fu, Chaoyou and Lin, Haojia and Wang, Xiong and Zhang, Yi-Fan and Shen, Yunhang and Liu, Xiaoyu and Li, Yangze and Long, Zuwei and Gao, Heting and Li, Ke and others},
   journal={arXiv preprint arXiv:2501.01957},
   year={2025}
 }
 
 @article{fu2024vita,
   title={Vita: Towards open-source interactive omni multimodal llm},
-  author={Fu, Chaoyou and Lin, Haojia and Long, Zuwei and Shen, Yunhang and Zhao, Meng and Zhang, Yifan and Wang, Xiong and Yin, Di and Ma, Long and Zheng, Xiawu and others},
+  author={Fu, Chaoyou and Lin, Haojia and Long, Zuwei and Shen, Yunhang and Zhao, Meng and Zhang, Yifan and Dong, Shaoqi and Wang, Xiong and Yin, Di and Ma, Long and others},
   journal={arXiv preprint arXiv:2408.05211},
   year={2024}
 }
