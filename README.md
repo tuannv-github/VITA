@@ -5,7 +5,7 @@
     <img src="./asset/vita_newlog.jpg" width="100%" height="100%">
 </p>
 
-<font size=7><div align='center' > [[📖 VITA-1.5 Paper](https://arxiv.org/pdf/2501.01957)] [[🤗 Hugging Face](https://huggingface.co/VITA-MLLM)] [[🍎 VITA-1.0](https://vita-home.github.io/)] [[💬 WeChat (微信)](./asset/wechat-group.jpg)]</div></font>
+<font size=7><div align='center' > [[📖 VITA-1.5 Paper](https://arxiv.org/pdf/2501.01957)] [[🤖 Basic Demo](https://modelscope.cn/studios/modelscope/VITA1.5_demo)] [[🍎 VITA-1.0](https://vita-home.github.io/)] [[💬 WeChat (微信)](./asset/wechat-group.jpg)]</div></font>
 
 ---
 
@@ -15,7 +15,7 @@
 
 <font size=7><div align='center' > [[📽 VITA-1.5 Demo Show! Here We Go! 🔥](https://youtu.be/tyi6SVFT5mM?si=fkMQCrwa5fVnmEe7)] </div></font>  
 <font size=7><div align='center' > VITA-1.5 spports both **English** and **Chinese**.🌟 </div></font>  
-
+You can experience our [🤖 Basic Demo](https://modelscope.cn/studios/modelscope/VITA1.5_demo) on ModelScope directly. The Real-Time Interactive Demo needs to be configured according to the [instructions](#-real-time-interactive-demo).
 
 ## 🔥 News
 * **`2025.01.06`** 🌟 [VLMEvalKit](https://github.com/open-compass/VLMEvalKit) of OpenCompass has supported our both VITA-1.5 and VITA-1.0 models!
