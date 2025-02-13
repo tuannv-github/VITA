@@ -38,10 +38,10 @@ class audioEncoderProcessor:
         except Exception as e:
             print(f"cannot open {wav_path}!!!!!!!!!!!!!!!!")
         if sample_rate != self.dataset_conf["resample_conf"]["resample_rate"]:
-            #            sample_rate = self.dataset_conf['resample_conf']['resample_rate']
             waveform = torchaudio.transforms.Resample(
                 orig_freq=sample_rate, new_freq=self.dataset_conf["resample_conf"]["resample_rate"]
             )(waveform)
+            sample_rate = self.dataset_conf['resample_conf']['resample_rate']
 
         waveform = waveform * (1 << 15)
         # Only keep key, feat, label
