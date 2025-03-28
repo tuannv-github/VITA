@@ -27,7 +27,6 @@ You can experience our [Basic Demo](https://modelscope.cn/studios/modelscope/VIT
 
 ## Contents <!-- omit in toc -->
 
-
 - [VITA-1.5: Towards GPT-4o Level Real-Time Vision and Speech Interaction](#vita-15-towards-gpt-4o-level-real-time-vision-and-speech-interaction)
   - [🔥 News](#-news)
   - [👀 VITA-1.5 Overview](#-vita-15-overview)
