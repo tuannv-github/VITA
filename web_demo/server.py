@@ -95,8 +95,15 @@ def clear_queue(queue):
 
 def load_model_embemding(model_path):
     from vita.model.language_model.vita_qwen2 import VITAQwen2Config, VITAQwen2ForCausalLM
-    config_path = os.path.join(model_path, 'origin_config.json')
-    config = VITAQwen2Config.from_pretrained(config_path)
+    # Use the main config.json and extract text_config for proper dimensions
+    config_path = os.path.join(model_path, 'config.json')
+    import json
+    with open(config_path, 'r') as f:
+        config_data = json.load(f)
+    
+    # Create config from text_config section which has the correct dimensions
+    text_config_data = config_data.get('text_config', {})
+    config = VITAQwen2Config(**text_config_data)
     model = VITAQwen2ForCausalLM.from_pretrained(model_path, config=config, low_cpu_mem_usage=True)
     embedding = model.get_input_embeddings()
     del model
@@ -162,6 +169,7 @@ def load_model(
         global_history,
         global_history_limit=0,
     ):
+    print(f"Starting Model Worker {llm_id} with CUDA devices: {cuda_devices}")
     # 设置CUDA设备
     os.environ["CUDA_VISIBLE_DEVICES"] = cuda_devices
     
@@ -173,18 +181,20 @@ def load_model(
     from decord import VideoReader, cpu
     from vita.model.language_model.vita_qwen2 import VITAQwen2Config, VITAQwen2ForCausalLM
     
-    #等待tts初始化
+    #等待其他worker初始化
     print(wait_workers_ready,'wait_workers_readywait_workers_readywait_workers_ready')
-    wait_workers_ready[1].wait()
+    if len(wait_workers_ready) > 1:
+        wait_workers_ready[1].wait()
     print(wait_workers_ready,'wait_workers_readywait_workers_ready')
     llm = LLM(
             model=engine_args,
             dtype="float16",
             tensor_parallel_size=1,
             trust_remote_code=True,
-            gpu_memory_utilization=0.85,  # 调整以解决 OOM 或减少显存使用
+            gpu_memory_utilization=0.85,  # Reduced for single GPU to avoid conflicts
             disable_custom_all_reduce=True,
-            limit_mm_per_prompt={'image':256,'audio':50}
+            limit_mm_per_prompt={'image':256,'audio':50},
+            # enforce_eager=True,  # Disable CUDA graphs to avoid NVML issues
         )
 
     tokenizer = AutoTokenizer.from_pretrained(engine_args, trust_remote_code=True)
@@ -341,15 +351,12 @@ def load_model(
             continue
 
         if not inputs_queue.empty():
+            print(f"[DEBUG] Worker {llm_id}: Queue not empty, processing request...")
 
-            with start_event_lock:
-                if start_event.is_set():
-                    inputs = inputs_queue.get()
-
-                    other_start_event.set()
-                    start_event.clear()
-                else:
-                    continue
+            # Simplified logic for single worker - no need for complex synchronization
+            print(f"[DEBUG] Worker {llm_id}: Getting request from queue...")
+            inputs = inputs_queue.get()
+            print(f"[DEBUG] Worker {llm_id}: Got request: {inputs.get('prompt', 'No prompt')[:100]}...")
             
             inputs = _process_inputs(inputs)
             current_inputs = inputs.copy()
@@ -370,11 +377,13 @@ def load_model(
 
             inputs.pop("prompt", None)
 
+            print(f"[DEBUG] Worker {llm_id}: Starting LLM generation...")
             llm_start_time = time.time()
             output = llm.generate(inputs,
                 sampling_params=sampling_params,
             )
             llm_end_time = time.time()
+            print(f"[DEBUG] Worker {llm_id}: LLM generation completed")
             print(f"{Colors.GREEN}LLM process time: {llm_end_time - llm_start_time}{Colors.RESET}")
 
             llm_output = output[0].outputs[0].text
@@ -393,9 +402,8 @@ def load_model(
                     if not is_negative:
                         history_generated_text += newly_generated_text
                         if is_first_time_to_work:
-                            print(f"Process {cuda_devices} is about to interrupt other process")
+                            print(f"Process {cuda_devices} is starting work")
                             stop_event.clear()
-                            other_stop_event.set()
                             clear_queue(outputs_queue)
                             clear_queue(tts_outputs_queue)
                             is_first_time_to_work = False
@@ -427,6 +435,7 @@ def tts_worker(
     worker_ready,
     wait_workers_ready,
 ):
+    print("Starting TTS Worker")
     # 导入依赖CUDA的包
     import torch
     import torchaudio
@@ -564,11 +573,13 @@ def tts_worker(
 
         tts_input_text = ""
         while not inputs_queue.empty():
+            print(f"[DEBUG] TTS Worker: Queue not empty, processing TTS request...")
             time.sleep(0.03)
 
             stop_at_punc_or_len = False
             response = inputs_queue.get()
             llm_id, newly_generated_text = response["id"], response["response"]
+            print(f"[DEBUG] TTS Worker: Got TTS request for LLM ID {llm_id}, text: {newly_generated_text[:50]}...")
 
             for character in newly_generated_text:
                 
@@ -770,7 +781,9 @@ def send_pcm(sid, request_inputs_queue):
                         },
                     }
                 print(f"Start to put request into queue {current_request}")
+                print(f"[DEBUG] Main: Putting request into queue with prompt: {current_request.get('prompt', 'No prompt')[:100]}...")
                 request_inputs_queue.put(current_request)
+                print(f"[DEBUG] Main: Request successfully put into queue")
 
 @app.route('/')
 def index():
@@ -980,7 +993,7 @@ if __name__ == "__main__":
             "inputs_queue": tts_inputs_queue,
             "outputs_queue": tts_output_queue,
             "worker_ready": tts_worker_ready,
-            "wait_workers_ready": [llm_worker_1_ready, llm_worker_2_ready],
+            "wait_workers_ready": [],  # TTS worker doesn't need to wait for others since it uses CPU
         }
     )
 
@@ -999,37 +1012,38 @@ if __name__ == "__main__":
             "stop_event": worker_1_stop_event,
             "other_stop_event": worker_2_stop_event,
             "worker_ready": llm_worker_1_ready,
-            "wait_workers_ready": [llm_worker_2_ready, tts_worker_ready], 
+            "wait_workers_ready": [],  # Model_1 worker doesn't need to wait for others 
             "global_history": global_history,
             "global_history_limit": global_history_limit,
         }
     )
 
-    model_2_process = multiprocessing.Process(
-        target=load_model,
-        kwargs={
-            "llm_id": 2,
-            "engine_args": args.model_path,
-            "cuda_devices": "1",
-            "inputs_queue": request_inputs_queue,
-            "outputs_queue": tts_inputs_queue,
-            "tts_outputs_queue": tts_output_queue,
-            "start_event": worker_2_start_event,
-            "other_start_event": worker_1_start_event,
-            "start_event_lock": worker_1_2_start_event_lock,
-            "stop_event": worker_2_stop_event,
-            "other_stop_event": worker_1_stop_event,
-            "worker_ready": llm_worker_2_ready,
-            "wait_workers_ready": [llm_worker_1_ready, tts_worker_ready], 
-            "global_history": global_history,
-            "global_history_limit": global_history_limit,
-        }
-    )
+    # Comment out model_2_process since we only have 1 GPU
+    # model_2_process = multiprocessing.Process(
+    #     target=load_model,
+    #     kwargs={
+    #         "llm_id": 2,
+    #         "engine_args": args.model_path,
+    #         "cuda_devices": "0",
+    #         "inputs_queue": request_inputs_queue,
+    #         "outputs_queue": tts_inputs_queue,
+    #         "tts_outputs_queue": tts_output_queue,
+    #         "start_event": worker_2_start_event,
+    #         "other_start_event": worker_1_start_event,
+    #         "start_event_lock": worker_1_2_start_event_lock,
+    #         "stop_event": worker_2_stop_event,
+    #         "other_stop_event": worker_1_stop_event,
+    #         "worker_ready": llm_worker_2_ready,
+    #         "wait_workers_ready": [llm_worker_1_ready, tts_worker_ready], 
+    #         "global_history": global_history,
+    #         "global_history_limit": global_history_limit,
+    #     }
+    # )
 
     # 3. 启动进程
     model_1_process.start()
-    model_2_process.start()
-    tts_worker_process.start()
+    # model_2_process.start()  # Commented out since we only have 1 GPU
+    tts_worker_process.start()  # Re-enabled TTS worker
 
     # 4. 将多进程资源添加到 Flask app context
     app.config['REQUEST_QUEUE'] = request_inputs_queue
@@ -1045,8 +1059,8 @@ if __name__ == "__main__":
     app.config['TTS_READY'] = tts_worker_ready
     app.config['GLOBAL_HISTORY'] = global_history
     app.config['MODEL_1_PROCESS'] = model_1_process
-    app.config['MODEL_2_PROCESS'] = model_2_process
-    app.config['TTS_WORKER_PROCESS'] = tts_worker_process
+    # app.config['MODEL_2_PROCESS'] = model_2_process  # Commented out since we only have 1 GPU
+    app.config['TTS_WORKER_PROCESS'] = tts_worker_process  # Re-enabled TTS worker
 
     import cv2
     import torch
@@ -1056,9 +1070,9 @@ if __name__ == "__main__":
     key_file = "web_demo/vita_html/web/resources/key.pem"
     if not os.path.exists(cert_file) or not os.path.exists(key_file):
         generate_self_signed_cert(cert_file, key_file)
-    socketio.run(app, host=args.ip, port=args.port, debug=False, ssl_context=(cert_file, key_file))
+    socketio.run(app, host=args.ip, port=args.port, debug=False, ssl_context=(cert_file, key_file), allow_unsafe_werkzeug=True)
 
     # 6. 等待进程结束
     model_1_process.join()
-    model_2_process.join()
-    tts_worker_process.join()
+    # model_2_process.join()  # Commented out since we only have 1 GPU
+    tts_worker_process.join()  # Re-enabled TTS worker

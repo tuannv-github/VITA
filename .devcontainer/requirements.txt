@@ -1,0 +1,6 @@
+flask
+markupsafe>=2.0,<3.0
+blinker>=1.9.0
+flask_socketio
+timm
+setuptools<81

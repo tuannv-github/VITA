@@ -135,7 +135,8 @@ def is_wav(file_path):
     return ext.lower() in wav_extensions
 
 def load_model_embemding(model_path):
-    config_path = os.path.join(model_path, 'origin_config.json')
+    # Use the main config.json instead of origin_config.json to avoid tensor shape mismatch
+    config_path = os.path.join(model_path, 'config.json')
     config = VITAQwen2Config.from_pretrained(config_path)
     model = VITAQwen2ForCausalLM.from_pretrained(model_path, config=config, low_cpu_mem_usage=True)
     embedding = model.get_input_embeddings()

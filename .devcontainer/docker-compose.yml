@@ -1,0 +1,33 @@
+services:
+  vita-web-demo:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: vita-web-demo
+    ports:
+      - "8081:8081"
+    volumes:
+      - ..:/workspace
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - CUDA_HOME=/usr/local/cuda
+      - VLLM_USE_TRITON_FLASH_ATTN=0
+      - VLLM_ATTENTION_BACKEND=XFORMERS
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    working_dir: /workspace
+    command: >
+      bash -c "
+        echo 'Starting VITA-1.5 Web Demo Server...' &&
+        python -m web_demo.server --port 8081 --ip 0.0.0.0 --model_path /workspace/demo_VITA_ckpt
+      "
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
