@@ -73,32 +73,6 @@ RUN apt-get update && apt-get install -y \
     libgcc-s1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create symbolic links for python
-RUN ln -s /usr/bin/python3.10 /usr/bin/python || ln -s /usr/bin/python3.10 /usr/bin/python3 || true
-
-# Upgrade pip
-RUN python -m pip install --upgrade pip setuptools wheel
-
-# Install PyTorch with CUDA support first (this is critical for proper CUDA detection)
-# Use consistent versions with web_demo_requirements.txt
-RUN pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
-
-# Install other core dependencies
-RUN pip install \
-    numpy==1.26.4 \
-    pillow \
-    tqdm \
-    Jinja2 \
-    ninja \
-    accelerate \
-    deepspeed \
-    transformers==4.44.2 \
-    decord==0.6.0 \
-    xformers==0.0.27.post2
-
-# Install flash-attn (this needs to be done separately due to compilation requirements)
-RUN pip install flash-attn --no-build-isolation
-
 # Install additional system packages that might be needed
 RUN apt-get update && apt-get install -y \
     libjpeg-dev \
@@ -118,45 +92,65 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-ARG USERNAME=vscode
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
-
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && apt-get update \
-    && apt-get install -y sudo \
-    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set the default user
-USER $USERNAME
-
-# Set working directory
-WORKDIR /workspace
-
-# Set environment variables for the user
-ENV HOME=/home/$USERNAME
-ENV USER=$USERNAME
-
 # Install setuptools first to fix pyairports deprecation warning
-RUN pip install "setuptools<81"
+# RUN pip install "setuptools<81"
+
+# Create symbolic links for python
+RUN ln -s /usr/bin/python3.10 /usr/bin/python || ln -s /usr/bin/python3.10 /usr/bin/python3 || true
+
+# Upgrade pip
+RUN python -m pip install --upgrade pip setuptools wheel
 
 # Install pyairports and outlines first to resolve vllm dependencies
 RUN pip install "git+https://github.com/NICTA/pyairports.git#egg=pyairports"
 RUN pip install "outlines>=0.0.43,<0.1"
 
-# Copy the web demo requirements file
-COPY web_demo/web_demo_requirements.txt /tmp/web_demo_requirements.txt
-
 # Install additional Python requirements for the web demo with conflict resolution
+COPY web_demo/web_demo_requirements.txt /tmp/web_demo_requirements.txt
 RUN pip install -r /tmp/web_demo_requirements.txt
 
 # Install local requirements with conflict resolution
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+COPY .devcontainer/requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt --ignore-installed blinker
+
+# Copy and run build data download script
+COPY .devcontainer/download_and_install.sh /workspace/download_and_install.sh
+RUN chmod +x /workspace/download_and_install.sh && \
+    echo "Downloading all build data..." && \
+    bash /workspace/download_and_install.sh && \
+    echo "Build data download completed successfully"
+
+# # Create a non-root user
+# ARG USERNAME=vscode
+# ARG USER_UID=1000
+# ARG USER_GID=$USER_UID
+
+# RUN groupadd --gid $USER_GID $USERNAME \
+#     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+#     && apt-get update \
+#     && apt-get install -y sudo \
+#     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+#     && chmod 0440 /etc/sudoers.d/$USERNAME \
+#     && rm -rf /var/lib/apt/lists/*
+
+# # Set the default user
+# USER $USERNAME
+
+# # Set environment variables for the user
+# ENV HOME=/home/$USERNAME
+# ENV USER=$USERNAME
+
+RUN pip install einops
+RUN pip install timm
+
+RUN pip install accelerate
+RUN pip install timm
+RUN pip install setuptools
+
+COPY web_demo/vllm_tools/vllm_file/* /usr/local/lib/python3.10/dist-packages/vllm/model_executor/models/
+
+# Set working directory
+WORKDIR /workspace
 
 # Set the default command
 CMD ["/bin/bash"]

@@ -1,6 +1,15 @@
+# numpy
+# pillow
+# tqdm
+# Jinja2
+# ninja
+# accelerate
+# deepspeed
+
 flask
-markupsafe>=2.0,<3.0
-blinker>=1.9.0
+markupsafe
+blinker
 flask_socketio
-timm
-setuptools<81
+# timm
+# setuptools
+huggingface_hub

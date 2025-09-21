@@ -8,6 +8,9 @@ services:
       - "8081:8081"
     volumes:
       - ..:/workspace
+      # Mount VITA model from host (download with ./download_model_host.sh first)
+      - ../demo_VITA_ckpt:/workspace/demo_VITA_ckpt
+      # Custom vLLM files are copied in Dockerfile instead of mounted
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
@@ -24,10 +27,7 @@ services:
               capabilities: [gpu]
     working_dir: /workspace
     command: >
-      bash -c "
-        echo 'Starting VITA-1.5 Web Demo Server...' &&
-        python -m web_demo.server --port 8081 --ip 0.0.0.0 --model_path /workspace/demo_VITA_ckpt
-      "
+      bash /workspace/.devcontainer/start.sh
     restart: unless-stopped
     stdin_open: true
     tty: true

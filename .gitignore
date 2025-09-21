@@ -1,3 +1,6 @@
 demo_VITA_ckpt
 logs
 chat_history
+__pycache__
+VITA_ckpt
+web_demo/wakeup_and_vad/resource
