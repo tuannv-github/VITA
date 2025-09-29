@@ -164,10 +164,18 @@ if __name__ == "__main__":
 
     disable_torch_init()
     model_path = os.path.expanduser(model_path)
+    print(f'model_path:\n-\n{model_path}\n----------')
     model_name = get_model_name_from_path(model_path)
+    print(f'model_name:\n-\n{model_name}\n----------')
+    print(f'args.model_type:\n-\n{args.model_type}\n----------')
     tokenizer, model, image_processor, context_len = load_pretrained_model(
         model_path, model_base, model_name, args.model_type
     )
+
+    with open("model_structure.txt", "w") as f:
+        print("==== Model Structure ====", file=f)
+        print(model, file=f)
+    print("[VITA] model structure written to model_structure.txt")
 
     model.resize_token_embeddings(len(tokenizer))
 
@@ -239,6 +247,7 @@ if __name__ == "__main__":
         if audio_path:
             qs = qs + DEFAULT_AUDIO_TOKEN
         modality = "lang"
+    print(f'qs:\n-\n{qs}\n----------')
 
     conv = conv_templates[conv_mode].copy()
     conv.append_message(conv.roles[0], qs)
@@ -264,6 +273,10 @@ if __name__ == "__main__":
 
     start_time = time.time()
     with torch.inference_mode():
+        print(f'prompt:\n-\n{prompt}\n----------')
+        print(f'input_ids.shape:\n-\n{input_ids.shape}\n----------')
+        print(f'image_tensor.shape:\n-\n{image_tensor.shape}\n----------')
+        print(f'audios:\n-\n{audios}\n----------')
         output_ids = model.generate(
             input_ids,
             images=image_tensor,

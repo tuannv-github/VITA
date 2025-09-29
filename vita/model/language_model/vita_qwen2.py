@@ -75,7 +75,6 @@ def custom_forward(
         output_attentions=output_attentions,
         output_hidden_states=output_hidden_states,
         return_dict=return_dict,
-        cache_position=cache_position,
     )
 
     hidden_states = outputs[0]
@@ -178,7 +177,6 @@ class VITAQwen2ForCausalLM(Qwen2ForCausalLM, VITAMetaForCausalLM):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-            cache_position=cache_position,
         )
 
     @torch.no_grad()
@@ -218,6 +216,30 @@ class VITAQwen2ForCausalLM(Qwen2ForCausalLM, VITAMetaForCausalLM):
         else:
             inputs_embeds = self.get_model().embed_tokens(inputs)
 
+        # strongSwan-style debug print for tensor info
+        def _tensor_info(name, tensor):
+            if tensor is None:
+                return f"{name}: None", 0
+            shape = tuple(tensor.shape)
+            dtype = str(tensor.dtype)
+            device = str(tensor.device)
+            numel = tensor.numel()
+            element_size = tensor.element_size()
+            size_bytes = numel * element_size
+            return f"{name}: shape={shape}, dtype={dtype}, device={device}, size={size_bytes} bytes ({size_bytes/1024:.2f} KB, {size_bytes/(1024*1024):.2f} MB)", size_bytes
+
+        info_pos, size_pos = _tensor_info('position_ids', position_ids)
+        info_att, size_att = _tensor_info('attention_mask', attention_mask)
+        info_emb, size_emb = _tensor_info('inputs_embeds', inputs_embeds)
+        total_size = size_pos + size_att + size_emb
+        total_kb = total_size / 1024
+        total_mb = total_size / (1024 * 1024)
+
+        print(f"00[GEN] {info_pos}")
+        print(f"00[GEN] {info_att}")
+        print(f"00[GEN] {info_emb}")
+        print(f"00[GEN] total tensor data size: {total_size} bytes, {total_kb:.2f} KB, {total_mb:.2f} MB")
+
         return super().generate(
             position_ids=position_ids,
             attention_mask=attention_mask,
@@ -247,8 +269,8 @@ class VITAQwen2ForCausalLM(Qwen2ForCausalLM, VITAMetaForCausalLM):
 
 #        import pdb; pdb.set_trace()
         position_ids = _inputs["position_ids"]
-        cache_position = _inputs["cache_position"]
-        if cache_position.shape[-1] == 1 and position_ids.shape[-1] > 1:
+        cache_position = _inputs.get("cache_position", None)
+        if cache_position is not None and cache_position.shape[-1] == 1 and position_ids.shape[-1] > 1:
             new_position_ids = torch.zeros((position_ids.shape[0],1), dtype=position_ids.dtype, device=position_ids.device)
             new_position_ids[:, 0] = position_ids[0,-1] + cache_position[-1] + 1 - position_ids.shape[-1]
             position_ids = new_position_ids

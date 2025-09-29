@@ -200,6 +200,7 @@ def load_pretrained_model(
             )
         elif model_type == "qwen2p5_instruct":
             # import pdb; pdb.set_trace()
+            print(f'Loading Qwen2.5-7B-Instruct model...\n-\n{model_path}\n----------')
             tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
             model = VITAQwen2ForCausalLM.from_pretrained(
                 model_path, low_cpu_mem_usage=True, **kwargs

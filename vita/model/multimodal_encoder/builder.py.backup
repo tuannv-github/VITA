@@ -2,8 +2,7 @@ import os
 
 import yaml
 import torch
-# from transformers.utils.hub import get_file_from_repo
-from transformers.utils import cached_file as get_file_from_repo
+from transformers.utils.hub import get_file_from_repo
 
 from .clip.clip_encoder import CLIPVisionTower
 from .eva_clip.eva_clip_encoder import EvaClipVisionTower
