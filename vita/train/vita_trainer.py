@@ -6,13 +6,24 @@ from torch import nn
 from torch.utils.data import Sampler
 from transformers import Trainer
 from transformers.trainer import (
-    # 
-    
     get_parameter_names,
     has_length,
     is_sagemaker_mp_enabled,
     logger,
 )
+
+# Define ALL_LAYERNORM_LAYERS if not available
+try:
+    from transformers.trainer import ALL_LAYERNORM_LAYERS
+except ImportError:
+    # Fallback for newer transformers versions - use actual layer types
+    ALL_LAYERNORM_LAYERS = (
+        torch.nn.LayerNorm,
+        torch.nn.GroupNorm,
+        torch.nn.BatchNorm1d,
+        torch.nn.BatchNorm2d,
+        torch.nn.BatchNorm3d,
+    )
 
 
 def maybe_zero_3(param, ignore_status=False, name=None):
@@ -154,12 +165,15 @@ class LengthGroupedSampler(Sampler):
 
 
 class VITATrainer(Trainer):
-    def _get_train_sampler(self) -> Optional[torch.utils.data.Sampler]:
-        if self.train_dataset is None or not has_length(self.train_dataset):
+    def _get_train_sampler(self, dataset=None) -> Optional[torch.utils.data.Sampler]:
+        if dataset is None:
+            dataset = self.train_dataset
+            
+        if dataset is None or not has_length(dataset):
             return None
 
         if self.args.group_by_modality_length:
-            lengths = self.train_dataset.modality_lengths
+            lengths = dataset.modality_lengths
             return LengthGroupedSampler(
                 self.args.train_batch_size,
                 world_size=self.args.world_size * self.args.gradient_accumulation_steps,
@@ -167,7 +181,7 @@ class VITATrainer(Trainer):
                 group_by_modality=True,
             )
         else:
-            return super()._get_train_sampler()
+            return super()._get_train_sampler(dataset)
 
     def create_optimizer(self):
         """
@@ -331,7 +345,7 @@ class VITATrainer(Trainer):
                     self.model.config.save_pretrained(output_dir)
                     torch.save(weight_to_save, os.path.join(output_dir, f"audio_adpter.bin"))
         else:
-            super(VITATrainer, self)._save_checkpoint(model, trial, metrics)
+            super(VITATrainer, self)._save_checkpoint(model, trial)
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
         if getattr(self.args, "tune_mm_mlp_adapter", False) or getattr(self.args, "tune_audio_mlp_adapter", False):
@@ -340,7 +354,7 @@ class VITATrainer(Trainer):
             super(VITATrainer, self)._save(output_dir, state_dict)
 
     def training_step(
-        self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]
+        self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]], num_items_in_batch: Optional[int] = None
     ) -> torch.Tensor:
         """
         Perform a training step on a batch of inputs.

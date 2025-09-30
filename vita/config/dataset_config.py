@@ -1,8 +1,7 @@
-AudioFolder = ""
+AudioFolder = "/root/datasets/vita_audio_data/"
+
 FolderDict = {
-    #### NaturalCap
-    "sharegpt4": "",
+    "train2017": "/root/datasets/llava/adamo1139_llava-instruct-150k-with-images",
 }
-#### NaturalCap
-ShareGPT4V = {"chat_path": ""}
-ShareGPT4V0 = {"chat_path": ""}
+
+LLaVADataset = {"chat_path": "/root/datasets/llava/adamo1139_llava-instruct-150k-with-images/llava_instruct_150k_newpath.json"}

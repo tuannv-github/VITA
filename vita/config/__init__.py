@@ -1,10 +1,9 @@
 from .dataset_config import *
 
-NaturalCap0 = [ShareGPT4V0]
-NaturalCap = [ShareGPT4V]
+NaturalCap = [LLaVADataset]
 
 DataConfig = {
-    "Pretrain_video": NaturalCap0,
+    "llava-instruct-150k": NaturalCap,
 }
 
 NoPatchSets = ["khair", "jester"]

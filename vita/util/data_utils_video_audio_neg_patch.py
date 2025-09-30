@@ -837,6 +837,7 @@ class LazySupervisedDataset(Dataset):
         list_data_dict = []
         self.folder_dict = {}
         for i in dataset_list:
+            print("Chat path: ", i["chat_path"])
             # list_data_dict += json.load(open(i["chat_path"], "r"))
             data_ratio = i.get("data_ratio", DEFAULT_DATA_RATIO)
             data_i = json.load(open(i["chat_path"], "r"))
@@ -887,6 +888,8 @@ class LazySupervisedDataset(Dataset):
         if "image" in sources[0] and "audio" not in sources[0]:
             image_file = self.list_data_dict[i]["image"]
             set_id = self.list_data_dict[i].get("set", None)
+            if set_id is None:
+                set_id = image_file.split("/")[0]
             file = image_file[0] if type(image_file) is list else image_file
             processor = self.data_args.image_processor
             if "height" in processor.size.keys():
@@ -1029,6 +1032,8 @@ class LazySupervisedDataset(Dataset):
         elif "image" in sources[0] and "audio" in sources[0]:
             image_file = self.list_data_dict[i]["image"]
             set_id = self.list_data_dict[i].get("set", None)
+            if set_id is None:
+                set_id = image_file.split("/")[0]
             file = image_file[0] if type(image_file) is list else image_file
             audio_file = self.list_data_dict[i]["audio"]
             processor = self.data_args.image_processor
