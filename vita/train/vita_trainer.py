@@ -165,15 +165,12 @@ class LengthGroupedSampler(Sampler):
 
 
 class VITATrainer(Trainer):
-    def _get_train_sampler(self, dataset=None) -> Optional[torch.utils.data.Sampler]:
-        if dataset is None:
-            dataset = self.train_dataset
-            
-        if dataset is None or not has_length(dataset):
+    def _get_train_sampler(self) -> Optional[torch.utils.data.Sampler]:
+        if self.train_dataset is None or not has_length(self.train_dataset):
             return None
 
         if self.args.group_by_modality_length:
-            lengths = dataset.modality_lengths
+            lengths = self.train_dataset.modality_lengths
             return LengthGroupedSampler(
                 self.args.train_batch_size,
                 world_size=self.args.world_size * self.args.gradient_accumulation_steps,
@@ -181,7 +178,7 @@ class VITATrainer(Trainer):
                 group_by_modality=True,
             )
         else:
-            return super()._get_train_sampler(dataset)
+            return super()._get_train_sampler()
 
     def create_optimizer(self):
         """
