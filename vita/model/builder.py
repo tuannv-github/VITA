@@ -11,6 +11,45 @@ logging.set_verbosity_error()
 warnings.filterwarnings("ignore")
 
 
+def _load_tokenizer_safe(model_path, model_base=None, use_fast=True):
+    """
+    Safely load tokenizer with fallback options.
+    
+    Args:
+        model_path: Path to the model/checkpoint
+        model_base: Optional base model path to fallback to
+        use_fast: Whether to try fast tokenizer first
+    
+    Returns:
+        Loaded tokenizer
+    """
+    # First try: fast tokenizer from model_path
+    if use_fast:
+        try:
+            return AutoTokenizer.from_pretrained(model_path, use_fast=True)
+        except Exception as e:
+            error_str = str(e)
+            if "ModelWrapper" in error_str or "tokenizer.json" in error_str.lower() or "untagged enum" in error_str.lower():
+                print(f"⚠️ Fast tokenizer failed (possibly corrupted), trying slow tokenizer...")
+            else:
+                # For other errors, still try slow tokenizer as fallback
+                print(f"⚠️ Fast tokenizer failed: {error_str}, trying slow tokenizer...")
+    
+    # Second try: slow tokenizer from model_path
+    try:
+        return AutoTokenizer.from_pretrained(model_path, use_fast=False)
+    except Exception as e:
+        # Third try: if model_base is provided, try loading from base model
+        if model_base is not None:
+            print(f"⚠️ Tokenizer from checkpoint failed, trying base model tokenizer...")
+            try:
+                return AutoTokenizer.from_pretrained(model_base, use_fast=True)
+            except Exception:
+                return AutoTokenizer.from_pretrained(model_base, use_fast=False)
+        # If no model_base, re-raise the exception
+        raise
+
+
 def load_pretrained_model(
     model_path,
     model_base,
@@ -53,7 +92,7 @@ def load_pretrained_model(
 
         print("Loading VITA from base model...")
         if model_type == "mixtral-8x7b":
-            tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
+            tokenizer = _load_tokenizer_safe(model_path, model_base)
             model = VITAMixtralForCausalLM.from_pretrained(
                 model_path, low_cpu_mem_usage=True, **kwargs
             )
@@ -107,7 +146,7 @@ def load_pretrained_model(
 
         cfg_pretrained = AutoConfig.from_pretrained(model_path)
         if model_type == "mixtral-8x7b":
-            tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=True)
+            tokenizer = _load_tokenizer_safe(model_base, model_base)
             model = VITAMixtralForCausalLM.from_pretrained(
                 model_base, low_cpu_mem_usage=True, **kwargs
             )
@@ -187,27 +226,27 @@ def load_pretrained_model(
             }
             device_map["model.audio_encoder"] = 0
             kwargs.update(device_map=device_map)
-            tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
+            tokenizer = _load_tokenizer_safe(model_path, model_base)
             model = VITAMixtralForCausalLM.from_pretrained(
                 model_path, low_cpu_mem_usage=True, **kwargs
             )
             # model.hf_device_map
         elif model_type == "nemo":
             # import pdb; pdb.set_trace()
-            tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
+            tokenizer = _load_tokenizer_safe(model_path, model_base)
             model = VITAMistralForCausalLM.from_pretrained(
                 model_path, low_cpu_mem_usage=True, **kwargs
             )
         elif model_type == "qwen2p5_instruct":
             # import pdb; pdb.set_trace()
             print(f'Loading Qwen2.5-7B-Instruct model...\n-\n{model_path}\n----------')
-            tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
+            tokenizer = _load_tokenizer_safe(model_path, model_base)
             model = VITAQwen2ForCausalLM.from_pretrained(
                 model_path, low_cpu_mem_usage=True, **kwargs
             )
         elif model_type == "qwen2p5_fo_instruct":
             # import pdb; pdb.set_trace()
-            tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
+            tokenizer = _load_tokenizer_safe(model_path, model_base)
             model = VITAFOQwen2ForCausalLM.from_pretrained(
                 model_path, low_cpu_mem_usage=True, **kwargs
             )
